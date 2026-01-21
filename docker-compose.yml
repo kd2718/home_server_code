@@ -1,31 +1,29 @@
-version: '3'
 services:
   postgres:
-    image: bitnami/postgresql:latest
+    image: postgres:14.20
     ports:
       - 5432:5432
     restart: always
     env_file:
       - .env
-    environment:
-      POSTGRESQL_USERNAME: ${DB_USER}
-      POSTGRESQL_PASSWORD: ${DB_PASSWORD}
-      POSTGRESQL_DATABASE: ${DB_NAME}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      test: ["CMD-SHELL", "pg_isready" ]
       interval: 1s
       timeout: 5s
       retries: 5
+    volumes:
+      # 1. Persist data so you don't lose it on restart
+      - postgres_data:/var/lib/postgresql/data
+      # 2. Load your init.sql on first boot
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
 
   account:
-    build:
-      dockerfile: .
+    build: .
     volumes:
       - ./:$PWD
     working_dir: $PWD
     ports:
-      - 8090:8090
-      - 9090:9090
+      - 8081:8081
     restart: on-failure
     depends_on:
       postgres:
@@ -33,3 +31,6 @@ services:
     env_file:
       - .env
     #command: ["sh","-c","go mod download && make migrate-up && make fixtures-up && air"]
+
+volumes:
+  postgres_data:
