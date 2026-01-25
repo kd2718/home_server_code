@@ -1,0 +1,36 @@
+services:
+  postgres:
+    image: postgres:14.20
+    ports:
+      - 5432:5432
+    restart: always
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready" ]
+      interval: 1s
+      timeout: 5s
+      retries: 5
+    volumes:
+      # 1. Persist data so you don't lose it on restart
+      - postgres_data:/var/lib/postgresql/data
+      # 2. Load your init.sql on first boot
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+  account:
+    build: .
+    volumes:
+      - ./:$PWD
+    working_dir: $PWD
+    ports:
+      - 8081:8081
+    restart: on-failure
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env
+    #command: ["sh","-c","go mod download && make migrate-up && make fixtures-up && air"]
+
+volumes:
+  postgres_data:
